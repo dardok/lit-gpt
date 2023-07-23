@@ -56,8 +56,7 @@ strategy=FSDPStrategy(
     limit_all_gathers=True,
 )
 
-logger = step_csv_logger(out_dir.parent, out_dir.name, flush_logs_every_n_steps=log_interval)
-fabric = L.Fabric(strategy=strategy, loggers=logger)
+fabric = L.Fabric(strategy=strategy)
 
 def main(
     data_dir: Path = Path("data/alpaca"),
