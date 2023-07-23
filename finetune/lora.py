@@ -12,25 +12,25 @@ from lightning.fabric.strategies import XLAStrategy, FSDPStrategy
 wd = Path(__file__).parent.parent.resolve()
 sys.path.append(str(wd))
 
-from generate.base import generate
+#from generate.base import generate
 from lit_gpt.lora import mark_only_lora_as_trainable, lora_filter, GPT, Config, Block
 from lit_gpt.tokenizer import Tokenizer
 from lit_gpt.utils import lazy_load, check_valid_checkpoint_dir, step_csv_logger, chunked_cross_entropy
 from lit_gpt.speed_monitor import SpeedMonitorFabric as SpeedMonitor, measure_flops, estimate_flops
-from scripts.prepare_alpaca import generate_prompt
+#from scripts.prepare_alpaca import generate_prompt
 
 
 eval_interval = 100
 save_interval = 100
 eval_iters = 100
 log_interval = 1
-devices = 1
+devices = 16
 # change this value to force a maximum sequence length
 override_max_seq_length = None
 
 # Hyperparameters
 learning_rate = 3e-4
-batch_size = 128
+batch_size = 128 / devices
 micro_batch_size = 4
 gradient_accumulation_iters = batch_size // micro_batch_size
 assert gradient_accumulation_iters > 0
@@ -49,45 +49,26 @@ warmup_steps = 100
 
 hparams = {k: v for k, v in locals().items() if isinstance(v, (int, float, str)) and not k.startswith("_")}
 
+strategy=FSDPStrategy(
+    auto_wrap_policy={Block},
+    activation_checkpointing_policy={Block},
+    state_dict_type="full",
+    limit_all_gathers=True,
+)
 
-def setup(
+logger = step_csv_logger(out_dir.parent, out_dir.name, flush_logs_every_n_steps=log_interval)
+fabric = L.Fabric(strategy=strategy, loggers=logger)
+
+def main(
     data_dir: Path = Path("data/alpaca"),
     checkpoint_dir: Path = Path("checkpoints/stabilityai/stablelm-base-alpha-3b"),
     out_dir: Path = Path("out/lora/alpaca"),
-    precision: Optional[str] = None,
-    tpu: bool = False,
 ):
-    if precision is None:
-        precision = "32-true" if tpu else "bf16-mixed"
-    fabric_devices = devices
-    if fabric_devices > 1:
-        if tpu:
-            # For multi-host TPU training, the device count for Fabric is limited to the count on a single host.
-            fabric_devices = "auto"
-            strategy = XLAStrategy(sync_module_states=False)
-        else:
-            precision="bf16-true"
-            strategy=FSDPStrategy(
-                auto_wrap_policy={Block},
-                activation_checkpointing_policy={Block},
-                state_dict_type="full",
-                limit_all_gathers=True,
-            )
-    else:
-        strategy = "auto"
-
-    logger = step_csv_logger(out_dir.parent, out_dir.name, flush_logs_every_n_steps=log_interval)
-    fabric = L.Fabric(devices=fabric_devices, strategy=strategy, precision=precision, loggers=logger)
-    fabric.print(hparams)
-    fabric.launch(main, data_dir, checkpoint_dir, out_dir)
-
-
-def main(fabric: L.Fabric, data_dir: Path, checkpoint_dir: Path, out_dir: Path):
     check_valid_checkpoint_dir(checkpoint_dir)
 
     speed_monitor = SpeedMonitor(fabric, window_size=50, time_unit="seconds")
 
-    fabric.seed_everything(1337)  # same seed for every process to init model (FSDP)
+    fabric.seed_everything(1337 + fabric.global_rank)  # same seed for every process to init model (FSDP)
 
     if fabric.global_rank == 0:
         os.makedirs(out_dir, exist_ok=True)
@@ -244,17 +225,17 @@ def validate(
     val_loss = losses.mean()
 
     # produce an example:
-    instruction = "Recommend a movie for me to watch during the weekend and explain the reason."
-    fabric.print(instruction)
-    sample = {"instruction": instruction, "input": ""}
-    prompt = generate_prompt(sample)
-    encoded = tokenizer.encode(prompt, device=model.device)
-    max_returned_tokens = len(encoded) + 100
-    output = generate(
-        model, idx=encoded, max_returned_tokens=max_returned_tokens, max_seq_length=max_returned_tokens, temperature=0.8
-    )
-    output = tokenizer.decode(output)
-    fabric.print(output)
+#    instruction = "Recommend a movie for me to watch during the weekend and explain the reason."
+#    fabric.print(instruction)
+#    sample = {"instruction": instruction, "input": ""}
+#    prompt = generate_prompt(sample)
+#    encoded = tokenizer.encode(prompt, device=model.device)
+#    max_returned_tokens = len(encoded) + 100
+#    output = generate(
+#        model, idx=encoded, max_returned_tokens=max_returned_tokens, max_seq_length=max_returned_tokens, temperature=0.8
+#    )
+#    output = tokenizer.decode(output)
+#    fabric.print(output)
 
     model.reset_cache()
 
