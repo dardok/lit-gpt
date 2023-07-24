@@ -276,4 +276,4 @@ if __name__ == "__main__":
 
     from jsonargparse.cli import CLI
 
-    CLI(setup)
+    CLI(main)
