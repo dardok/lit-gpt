@@ -51,7 +51,7 @@ hparams = {k: v for k, v in locals().items() if isinstance(v, (int, float, str))
 #    cpu_offload=False,
 #)
 auto_wrap_policy = partial(transformer_auto_wrap_policy, transformer_layer_cls={Block})
-strategy = FSDPStrategy(auto_wrap_policy=auto_wrap_policy, activation_checkpointing=Block, limit_all_gathers=True, cpu_offload=False)
+strategy = FSDPStrategy(auto_wrap_policy=auto_wrap_policy, activation_checkpointing=Block, state_dict_type="full", limit_all_gathers=True, cpu_offload=False)
 
 fabric = L.Fabric(strategy=strategy)
 
