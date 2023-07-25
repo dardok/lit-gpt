@@ -51,14 +51,12 @@ warmup_steps = 100
 
 hparams = {k: v for k, v in locals().items() if isinstance(v, (int, float, str)) and not k.startswith("_")}
 
-#strategy=FSDPStrategy(
-#    auto_wrap_policy={Block},
-#    activation_checkpointing_policy={Block},
-#    state_dict_type="full",
-#    limit_all_gathers=True,
-#)
-auto_wrap_policy = partial(transformer_auto_wrap_policy, transformer_layer_cls={Block})
-strategy = FSDPStrategy(auto_wrap_policy=auto_wrap_policy, activation_checkpointing=Block, state_dict_type="full", limit_all_gathers=True, cpu_offload=False)
+strategy=FSDPStrategy(
+    auto_wrap_policy={Block},
+    activation_checkpointing_policy={Block},
+    state_dict_type="full",
+    limit_all_gathers=True,
+)
 
 fabric = L.Fabric(strategy=strategy)
 

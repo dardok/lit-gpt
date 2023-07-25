@@ -41,14 +41,13 @@ warmup_steps = 2 * (epoch_size // micro_batch_size) // devices // gradient_accum
 
 hparams = {k: v for k, v in locals().items() if isinstance(v, (int, float, str)) and not k.startswith("_")}
 
-#strategy = FSDPStrategy(
-#    auto_wrap_policy={Block},
-#    activation_checkpointing_policy={Block},
-#    state_dict_type="full",
-#    limit_all_gathers=True,
-#    cpu_offload=False,
-#)
-strategy = FSDPStrategy(auto_wrap_policy={Block}, activation_checkpointing_policy={Block}, state_dict_type="full", limit_all_gathers=True, cpu_offload=False)
+strategy = FSDPStrategy(
+    auto_wrap_policy={Block},
+    activation_checkpointing_policy={Block},
+    state_dict_type="full",
+    limit_all_gathers=True,
+    cpu_offload=False,
+)
 
 fabric = L.Fabric(strategy=strategy)
 
