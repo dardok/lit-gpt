@@ -1,14 +1,12 @@
 import os
 import sys
 import time
-from functools import partial
 from pathlib import Path
 from typing import Optional, Tuple, Dict, List
 
 import lightning as L
 import torch
 from lightning.fabric.strategies import FSDPStrategy, XLAStrategy
-from torch.distributed.fsdp.wrap import transformer_auto_wrap_policy
 
 # support running without installing as a package
 wd = Path(__file__).parent.parent.resolve()
@@ -50,8 +48,7 @@ hparams = {k: v for k, v in locals().items() if isinstance(v, (int, float, str))
 #    limit_all_gathers=True,
 #    cpu_offload=False,
 #)
-auto_wrap_policy = partial(transformer_auto_wrap_policy, transformer_layer_cls={Block})
-strategy = FSDPStrategy(auto_wrap_policy=auto_wrap_policy, activation_checkpointing=Block, state_dict_type="full", limit_all_gathers=True, cpu_offload=False)
+strategy = FSDPStrategy(auto_wrap_policy={Block}, activation_checkpointing_policy={Block}, state_dict_type="full", limit_all_gathers=True, cpu_offload=False)
 
 fabric = L.Fabric(strategy=strategy)
 
